@@ -1,4 +1,5 @@
-﻿using System.Runtime.Versioning;
+﻿using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 namespace TinySystemInfo.Platforms;
 
@@ -12,6 +13,7 @@ internal class LinuxSystemReader : ISystemReader
 
 		return new SystemInfo(
 			HostName: Environment.MachineName,
+			OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
 			OSName: "Linux",
 			OSVersion: File.ReadAllText("/proc/version"),
 			CpuUsagePercent: cpuUsage,

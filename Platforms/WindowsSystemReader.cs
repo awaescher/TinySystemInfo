@@ -46,6 +46,7 @@ public class WindowsSystemReader : ISystemReader
 
 		return new SystemInfo(
 			HostName: Environment.MachineName,
+			OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
 			OSName: "Microsoft Windows",
 			OSVersion: Environment.OSVersion.Version.ToString(),
 			CpuUsagePercent: cpuUsage,

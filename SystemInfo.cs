@@ -2,6 +2,7 @@
 
 public record SystemInfo(
 	string HostName,
+	string OSArchitecture,
 	string OSName,
 	string OSVersion,
 	float CpuUsagePercent,

@@ -1,4 +1,5 @@
-﻿using TinySystemInfo.Platforms;
+﻿using System.Runtime.InteropServices;
+using TinySystemInfo.Platforms;
 
 namespace TinySystemInfo;
 
@@ -8,7 +9,7 @@ public class TinySystemReader
 	{
 		ISystemReader reader = Environment.OSVersion.Platform switch
 		{
-			PlatformID.Unix => new LinuxSystemReader(),
+			PlatformID.Unix => RuntimeInformation.RuntimeIdentifier.Contains("osx") ? new MacSystemReader() : new LinuxSystemReader(),
 			PlatformID.Win32NT => new WindowsSystemReader(),
 			_ => throw new PlatformNotSupportedException($"Platform \"{Environment.OSVersion.VersionString}\" is not supported."),
 		};
