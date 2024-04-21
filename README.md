@@ -25,3 +25,6 @@ var info = await TinySystemReader.Read();
 // RamAvailableBytes: 5469491200 (5216 MB)
 // RamUsedBytes: 2830032896 (2698 MB)
 ```
+
+The [app icon was made by Payungkead from www.flaticon.com](https://www.flaticon.com/free-icon/circuit_2479550) and is licensed by the Flaticon license.
+
