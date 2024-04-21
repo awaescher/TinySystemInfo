@@ -1,6 +1,6 @@
 # TinySystemInfo
 
-A dependency free package that gathers just a the absolute basic system metrics on Windows, macOS and Linux.
+A dependency free package that gathers just the absolute basic system metrics on Windows, macOS and Linux.
 
 |Operating system|Method|Comment|
 |-|-|-|
