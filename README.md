@@ -2,9 +2,9 @@
 
 A dependency free package that gathers just the absolute basic system metrics on Windows, macOS and Linux.
 
-|Operating system|Method|Comment|
+|Operating system|Methods used|Comment|
 |-|-|-|
-|Linux|`/etc/os-release`, `top`, `/proc/meminfo`|-|
+|Linux|`top`, `/proc/meminfo`, `/etc/os-release`|-|
 |macOS|`top`, `sysctl`, `sw_vers`|-|
 |Windows|`GlobalMemoryStatusEx()` & PerformanceCounters|No WMI because of massive delays|
 
