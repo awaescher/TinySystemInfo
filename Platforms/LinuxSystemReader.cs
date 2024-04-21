@@ -1,5 +1,7 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Text.RegularExpressions;
 
 namespace TinySystemInfo.Platforms;
 
@@ -8,14 +10,14 @@ internal class LinuxSystemReader : ISystemReader
 	[SupportedOSPlatform("linux")]
 	public async Task<SystemInfo> Read()
 	{
-		var cpuUsage = await GetCpuUsage();
+		var cpuUsage = GetCpuUsage();
 		var memoryInfo = await GetMemoryInfo();
 
 		return new SystemInfo(
 			HostName: Environment.MachineName,
 			OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
-			OSName: "Linux",
-			OSVersion: File.ReadAllText("/proc/version"),
+			OSName: ParseOsInfo("NAME"),
+			OSVersion: ParseOsInfo("VERSION_ID"),
 			CpuUsagePercent: cpuUsage,
 			CpuCount: Environment.ProcessorCount,
 			RamTotalBytes: memoryInfo.TotalMemory,
@@ -23,26 +25,20 @@ internal class LinuxSystemReader : ISystemReader
 		);
 	}
 
-	private async Task<float> GetCpuUsage()
+	private string ParseOsInfo(string key)
 	{
-		var firstMeasure = ReadCpuMetrics();
-		await Task.Delay(1000);
-		var secondMeasure = ReadCpuMetrics();
-
-		var idleTime = secondMeasure.IdleTime - firstMeasure.IdleTime;
-		var totalTime = secondMeasure.TotalTime - firstMeasure.TotalTime;
-
-		return (float)(100 * (1 - idleTime / totalTime));
+		var os = File.ReadAllText("/etc/os-release");
+		var match = Regex.Match(os, key + "=(.*)");
+		return match.Groups[1].Value.Trim().TrimStart('\"').TrimEnd('\"');
 	}
 
-	private CpuInfo ReadCpuMetrics()
+	private float GetCpuUsage()
 	{
-		string firstLine = File.ReadLines("/proc/stat").First();
-		var values = firstLine.Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(long.Parse).ToArray();
-		long idleTime = values[3] + values[4]; // idle and iowait
-		long totalTime = values.Sum();
+		var cpu = ExecuteBashCommand("top -b -n 1 | grep \"%Cpu\"");
+		var match = Regex.Match(cpu, "(\\d+\\.\\d) id");
+		var idlePercent = float.Parse(match.Groups[1].Value.Trim().TrimStart('\"').TrimEnd('\"'), System.Globalization.CultureInfo.InvariantCulture);
 
-		return new CpuInfo(IdleTime: idleTime, TotalTime: totalTime);
+		return 100.0f - idlePercent;
 	}
 
 	private async Task<MemoryInfo> GetMemoryInfo()
@@ -65,6 +61,25 @@ internal class LinuxSystemReader : ISystemReader
 		}
 		return 0;
 	}
+
+	
+    private string ExecuteBashCommand(string command)
+    {
+        using (var process = new Process())
+        {
+            process.StartInfo = new ProcessStartInfo("/bin/bash", $"-c \"{command}\"")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            process.Start();
+            string result = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return result;
+        }
+    }
 
 	public record CpuInfo(long IdleTime, long TotalTime);
 
