@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFrameworks>net6.0;net8.0</TargetFrameworks>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Description>
+			A dependency free package that gathers just the absolute basic system metrics on Windows, macOS and Linux.
+
+			The app icon was made by Payungkead from www.flaticon.com and is licensed by the Flaticon license.
+		</Description>
+		<PackageTags>system information;sysinfo</PackageTags>
+		<Copyright>Andreas Wäscher 2024</Copyright>
+		<PackageIcon>Icon.png</PackageIcon>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include=".\Icon.png">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
+	</ItemGroup>
+
+</Project>

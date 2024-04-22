@@ -55,4 +55,5 @@ public class WindowsSystemReader : ISystemReader
 			RamAvailableBytes: (long)memStatus.ullAvailPhys
 		);
 	}
+
 }

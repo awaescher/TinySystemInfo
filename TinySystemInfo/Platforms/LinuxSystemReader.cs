@@ -62,24 +62,24 @@ internal class LinuxSystemReader : ISystemReader
 		return 0;
 	}
 
-	
-    private string ExecuteBashCommand(string command)
-    {
-        using (var process = new Process())
-        {
-            process.StartInfo = new ProcessStartInfo("/bin/bash", $"-c \"{command}\"")
-            {
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
 
-            process.Start();
-            string result = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-            return result;
-        }
-    }
+	private string ExecuteBashCommand(string command)
+	{
+		using (var process = new Process())
+		{
+			process.StartInfo = new ProcessStartInfo("/bin/bash", $"-c \"{command}\"")
+			{
+				RedirectStandardOutput = true,
+				UseShellExecute = false,
+				CreateNoWindow = true
+			};
+
+			process.Start();
+			string result = process.StandardOutput.ReadToEnd();
+			process.WaitForExit();
+			return result;
+		}
+	}
 
 	public record CpuInfo(long IdleTime, long TotalTime);
 

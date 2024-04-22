@@ -11,14 +11,14 @@ public class MacSystemReader : ISystemReader
     [SupportedOSPlatform("osx")]
     public async Task<SystemInfo> Read()
     {
-		await Task.Yield();
+        await Task.Yield();
 
         var cpuUsage = GetCpuUsage();
         var memoryInfo = GetMemoryInfo();
 
         return new SystemInfo(
             HostName: Environment.MachineName,
-			OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
+            OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
             OSName: "macOS",
             OSVersion: GetOsVersion(),
             CpuUsagePercent: cpuUsage,
@@ -32,7 +32,7 @@ public class MacSystemReader : ISystemReader
     {
         string output = ExecuteBashCommand("top -l 1 -s 0 -n 0 | grep CPU");
 
-		var regex = new Regex(@"(\d+\.\d+)% idle");
+        var regex = new Regex(@"(\d+\.\d+)% idle");
         var match = regex.Match(output);
 
         if (match.Success)
@@ -46,7 +46,7 @@ public class MacSystemReader : ISystemReader
         var memoryPressureFree = float.Parse(ExecuteBashCommand("sysctl -n kern.memorystatus_level"), System.Globalization.CultureInfo.InvariantCulture);
         long totalMemory = long.Parse(ExecuteBashCommand("sysctl -n hw.memsize"), System.Globalization.CultureInfo.InvariantCulture);
 
-        var freeMemory = totalMemory / 100 * memoryPressureFree ;
+        var freeMemory = totalMemory / 100 * memoryPressureFree;
 
         return new MemoryInfo(TotalMemory: totalMemory, FreeMemory: (long)freeMemory);
     }
@@ -72,7 +72,7 @@ public class MacSystemReader : ISystemReader
         }
     }
 
-	public record CpuInfo(long IdleTime, long TotalTime);
+    public record CpuInfo(long IdleTime, long TotalTime);
 
-	public record MemoryInfo(long TotalMemory, long FreeMemory);
+    public record MemoryInfo(long TotalMemory, long FreeMemory);
 }
