@@ -5,36 +5,50 @@ using System.Text.RegularExpressions;
 
 namespace TinySystemInfo.Platforms;
 
-internal class LinuxSystemReader : ISystemReader
+public class LinuxSystemReader : ISystemReader
 {
+	public static string CpuUsageCommand { get; } = "top -b -n 1 | grep -i %CPU";
+	public static string OsInfoCommand { get; } = "cat /etc/os-release";
+	public static string MemoryInfoCommand { get; } = "cat /proc/meminfo";
+
+	public ICli Cli { get; set; } = new BashCli();
+
 	[SupportedOSPlatform("linux")]
-	public async Task<SystemInfo> Read()
+	public Task<SystemInfo> Read()
 	{
 		var cpuUsage = GetCpuUsage();
-		var memoryInfo = await GetMemoryInfo();
+		var memoryInfo = GetMemoryInfo();
+		var osInfo = GetOsInfo();
 
-		return new SystemInfo(
+		var info = new SystemInfo(
 			HostName: Environment.MachineName,
 			OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
-			OSName: ParseOsInfo("NAME"),
-			OSVersion: ParseOsInfo("VERSION_ID"),
+			OSName: GetOsName(osInfo),
+			OSVersion: GetOsVersion(osInfo),
 			CpuUsagePercent: cpuUsage,
 			CpuCount: Environment.ProcessorCount,
 			RamTotalBytes: memoryInfo.TotalMemory,
 			RamAvailableBytes: memoryInfo.FreeMemory
 		);
+
+		return Task.FromResult(info);
 	}
 
-	private string ParseOsInfo(string key)
+	public string GetOsInfo() => Cli.Run(OsInfoCommand);
+
+	public string GetOsName(string osInfo) => ParseOsInfo(osInfo, "NAME");
+
+	public string GetOsVersion(string osInfo) => ParseOsInfo(osInfo, "VERSION_ID");
+
+	private string ParseOsInfo(string osInfo, string key)
 	{
-		var os = File.ReadAllText("/etc/os-release");
-		var match = Regex.Match(os, key + "=(.*)");
+		var match = Regex.Match(osInfo, key + "=(.*)");
 		return match.Groups[1].Value.Trim().TrimStart('\"').TrimEnd('\"');
 	}
 
-	private float GetCpuUsage()
+	public float GetCpuUsage()
 	{
-        var output = ExecuteBashCommand("top -b -n 1 | grep -i %CPU");
+        var output = Cli.Run(CpuUsageCommand);
 
         var regex = new Regex($"{FloatParser.FloatPattern} id");
         var match = regex.Match(output);
@@ -45,9 +59,9 @@ internal class LinuxSystemReader : ISystemReader
         return 0;
 	}
 
-	private async Task<MemoryInfo> GetMemoryInfo()
+	public MemoryInfo GetMemoryInfo()
 	{
-		string memInfo = await File.ReadAllTextAsync("/proc/meminfo");
+		string memInfo = Cli.Run(MemoryInfoCommand);
 		long totalMemory = ParseMemoryInfo(memInfo, "MemTotal:");
 		long freeMemory = ParseMemoryInfo(memInfo, "MemFree:");
 
@@ -64,25 +78,6 @@ internal class LinuxSystemReader : ISystemReader
 				return value * 1024; // Convert from kB to Bytes
 		}
 		return 0;
-	}
-
-
-	private string ExecuteBashCommand(string command)
-	{
-		using (var process = new Process())
-		{
-			process.StartInfo = new ProcessStartInfo("/bin/bash", $"-c \"{command}\"")
-			{
-				RedirectStandardOutput = true,
-				UseShellExecute = false,
-				CreateNoWindow = true
-			};
-
-			process.Start();
-			string result = process.StandardOutput.ReadToEnd();
-			process.WaitForExit();
-			return result.Trim();
-		}
 	}
 
 	public record CpuInfo(long IdleTime, long TotalTime);
