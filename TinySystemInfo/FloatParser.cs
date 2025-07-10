@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 
+namespace TinySystemInfo;
+
 public static class FloatParser
 {
     public static string FloatPattern => "(\\d+[.,]\\d+)";
