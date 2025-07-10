@@ -2,5 +2,5 @@
 
 internal interface ISystemReader
 {
-	Task<SystemInfo> Read();
+	Task<SystemInfo> Read(TimeSpan delay);
 }

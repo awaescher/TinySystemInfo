@@ -17,9 +17,9 @@ public class MacSystemReader : ISystemReader
     public ICli Cli { get; set; } = new BashCli();
 
     [SupportedOSPlatform("osx")]
-    public async Task<SystemInfo> Read()
+    public async Task<SystemInfo> Read(TimeSpan delay)
     {
-        await Task.Yield();
+        await Task.Delay(delay);
 
         var cpuUsage = GetCpuUsage();
         var memoryInfo = GetMemoryInfo();

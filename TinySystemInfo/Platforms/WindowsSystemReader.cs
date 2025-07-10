@@ -29,10 +29,9 @@ public class WindowsSystemReader : ISystemReader
 	internal static extern bool GlobalMemoryStatusEx([In, Out] MEMORYSTATUSEX lpBuffer);
 
 	[SupportedOSPlatform("windows")]
-	public async Task<SystemInfo> Read()
-	{
-		var memStatus = new MEMORYSTATUSEX();
-		GlobalMemoryStatusEx(memStatus);
+    public async Task<SystemInfo> Read(TimeSpan delay)
+    {
+        await Task.Delay(delay);
 
 		float cpuUsage = 0;
 
@@ -43,6 +42,9 @@ public class WindowsSystemReader : ISystemReader
 
 			cpuUsage = cpuCounter.NextValue();
 		}
+
+		var memStatus = new MEMORYSTATUSEX();
+		GlobalMemoryStatusEx(memStatus);
 
 		return new SystemInfo(
 			HostName: Environment.MachineName,

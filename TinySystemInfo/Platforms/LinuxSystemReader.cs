@@ -14,13 +14,15 @@ public class LinuxSystemReader : ISystemReader
 	public ICli Cli { get; set; } = new BashCli();
 
 	[SupportedOSPlatform("linux")]
-	public Task<SystemInfo> Read()
-	{
+    public async Task<SystemInfo> Read(TimeSpan delay)
+    {
+        await Task.Delay(delay);
+
 		var cpuUsage = GetCpuUsage();
 		var memoryInfo = GetMemoryInfo();
 		var osInfo = GetOsInfo();
 
-		var info = new SystemInfo(
+		return new SystemInfo(
 			HostName: Environment.MachineName,
 			OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
 			OSName: GetOsName(osInfo),
@@ -30,8 +32,6 @@ public class LinuxSystemReader : ISystemReader
 			RamTotalBytes: memoryInfo.TotalMemory,
 			RamAvailableBytes: memoryInfo.FreeMemory
 		);
-
-		return Task.FromResult(info);
 	}
 
 	public string GetOsInfo() => Cli.Run(OsInfoCommand);

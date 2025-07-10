@@ -1,6 +1,6 @@
 ﻿using TinySystemInfo;
 
-var info = await TinySystemReader.Read();
+var info = await TinySystemReader.Read(TimeSpan.FromSeconds(1));
 
 var allProperties = info.GetType().GetProperties();
 var longestPropertyName = allProperties.Max(p => p.Name.Length);

@@ -5,7 +5,7 @@ namespace TinySystemInfo;
 
 public class TinySystemReader
 {
-	public static async Task<SystemInfo> Read()
+	public static async Task<SystemInfo> Read(TimeSpan delay)
 	{
 		ISystemReader reader = Environment.OSVersion.Platform switch
 		{
@@ -14,6 +14,6 @@ public class TinySystemReader
 			_ => throw new PlatformNotSupportedException($"Platform \"{Environment.OSVersion.VersionString}\" is not supported."),
 		};
 
-		return await reader.Read();
+		return await reader.Read(delay);
 	}
 }
