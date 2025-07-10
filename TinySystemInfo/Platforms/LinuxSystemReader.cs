@@ -34,11 +34,15 @@ internal class LinuxSystemReader : ISystemReader
 
 	private float GetCpuUsage()
 	{
-		var cpu = ExecuteBashCommand("top -b -n 1 | grep \"%Cpu\"");
-		var match = Regex.Match(cpu, "(\\d+\\.\\d) id");
-		var idlePercent = float.Parse(match.Groups[1].Value.Trim().TrimStart('\"').TrimEnd('\"'), System.Globalization.CultureInfo.InvariantCulture);
+        var output = ExecuteBashCommand("top -b -n 1 | grep -i %CPU");
 
-		return 100.0f - idlePercent;
+        var regex = new Regex($"{FloatParser.FloatPattern} id");
+        var match = regex.Match(output);
+
+        if (match.Success)
+            return 100.0f - FloatParser.Parse(match.Groups[1].Value);  // CPU usage as 100 - %idle
+
+        return 0;
 	}
 
 	private async Task<MemoryInfo> GetMemoryInfo()
@@ -77,7 +81,7 @@ internal class LinuxSystemReader : ISystemReader
 			process.Start();
 			string result = process.StandardOutput.ReadToEnd();
 			process.WaitForExit();
-			return result;
+			return result.Trim();
 		}
 	}
 

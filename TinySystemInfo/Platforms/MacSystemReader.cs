@@ -30,21 +30,21 @@ public class MacSystemReader : ISystemReader
 
     private float GetCpuUsage()
     {
-        string output = ExecuteBashCommand("top -l 1 -s 0 -n 0 | grep CPU");
+        var output = ExecuteBashCommand("top -l 1 -s 0 -n 0 | grep -i CPU");
 
-        var regex = new Regex(@"(\d+\.\d+)% idle");
+        var regex = new Regex($"{FloatParser.FloatPattern}% idle");
         var match = regex.Match(output);
 
         if (match.Success)
-            return 100.0f - float.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);  // CPU usage as 100 - %idle
+            return 100.0f - FloatParser.Parse(match.Groups[1].Value);  // CPU usage as 100 - %idle
 
         return 0;
     }
 
     private MemoryInfo GetMemoryInfo()
     {
-        var memoryPressureFree = float.Parse(ExecuteBashCommand("sysctl -n kern.memorystatus_level"), System.Globalization.CultureInfo.InvariantCulture);
-        long totalMemory = long.Parse(ExecuteBashCommand("sysctl -n hw.memsize"), System.Globalization.CultureInfo.InvariantCulture);
+        var memoryPressureFree = float.Parse(ExecuteBashCommand("sysctl -n kern.memorystatus_level"));
+        long totalMemory = long.Parse(ExecuteBashCommand("sysctl -n hw.memsize"));
 
         var freeMemory = totalMemory / 100 * memoryPressureFree;
 
@@ -68,7 +68,7 @@ public class MacSystemReader : ISystemReader
             process.Start();
             string result = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
-            return result;
+            return result.Trim();
         }
     }
 
