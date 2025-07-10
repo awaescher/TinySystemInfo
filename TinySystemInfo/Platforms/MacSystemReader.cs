@@ -8,6 +8,14 @@ namespace TinySystemInfo.Platforms;
 
 public class MacSystemReader : ISystemReader
 {
+    public static string CpuUsageCommand { get; } = "top -l 1 -s 0 -n 0 | grep -i CPU";
+	public static string OsNameCommand { get; } = "sw_vers -productName";
+	public static string OsVersionCommand { get; } = "sw_vers -productVersion";
+	public static string FreeMemoryCommand { get; } = "sysctl -n kern.memorystatus_level";
+	public static string TotalMemoryCommand { get; } = "sysctl -n hw.memsize";
+
+    public ICli Cli { get; set; } = new BashCli();
+
     [SupportedOSPlatform("osx")]
     public async Task<SystemInfo> Read()
     {
@@ -28,9 +36,9 @@ public class MacSystemReader : ISystemReader
         );
     }
 
-    private float GetCpuUsage()
+    public float GetCpuUsage()
     {
-        var output = ExecuteBashCommand("top -l 1 -s 0 -n 0 | grep -i CPU");
+        var output = Cli.Run(CpuUsageCommand);
 
         var regex = new Regex($"{FloatParser.FloatPattern}% idle");
         var match = regex.Match(output);
@@ -41,36 +49,19 @@ public class MacSystemReader : ISystemReader
         return 0;
     }
 
-    private MemoryInfo GetMemoryInfo()
+    public MemoryInfo GetMemoryInfo()
     {
-        var memoryPressureFree = float.Parse(ExecuteBashCommand("sysctl -n kern.memorystatus_level"));
-        long totalMemory = long.Parse(ExecuteBashCommand("sysctl -n hw.memsize"));
+        var memoryPressureFree = long.Parse(Cli.Run(FreeMemoryCommand));
+        long totalMemory = long.Parse(Cli.Run(TotalMemoryCommand));
 
         var freeMemory = totalMemory / 100 * memoryPressureFree;
 
         return new MemoryInfo(TotalMemory: totalMemory, FreeMemory: (long)freeMemory);
     }
 
+    public string GetOsName() => Cli.Run(OsNameCommand);
 
-    private string GetOsVersion() => ExecuteBashCommand("sw_vers -productVersion");
-
-    private string ExecuteBashCommand(string command)
-    {
-        using (var process = new Process())
-        {
-            process.StartInfo = new ProcessStartInfo("/bin/bash", $"-c \"{command}\"")
-            {
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            process.Start();
-            string result = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
-            return result.Trim();
-        }
-    }
+    public string GetOsVersion() => Cli.Run(OsVersionCommand);
 
     public record CpuInfo(long IdleTime, long TotalTime);
 

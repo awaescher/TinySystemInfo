@@ -9,12 +9,12 @@ namespace Tests;
 public class LinuxSystemReaderTests
 {
     private Dictionary<string, string> _cliResults = [];
-    private LinuxSystemReader _linuxSystemParser;
+    private LinuxSystemReader _linuxSystemReader;
 
     [SetUp]
     public void Setup()
     {
-        _linuxSystemParser = new LinuxSystemReader()
+        _linuxSystemReader = new LinuxSystemReader()
         {
             Cli = new MockCli(_cliResults)
         };
@@ -33,7 +33,7 @@ public class LinuxSystemReaderTests
             ID=ubuntu
             LOGO=ubuntu-logo";
 
-            _linuxSystemParser.GetOsName(_linuxSystemParser.GetOsInfo()).ShouldBe("Ubuntu 25.04");
+            _linuxSystemReader.GetOsName(_linuxSystemReader.GetOsInfo()).ShouldBe("Ubuntu 25.04");
         }
     }
 
@@ -50,24 +50,24 @@ public class LinuxSystemReaderTests
             ID=ubuntu
             LOGO=ubuntu-logo";
 
-            _linuxSystemParser.GetOsVersion(_linuxSystemParser.GetOsInfo()).ShouldBe("25.04");
+            _linuxSystemReader.GetOsVersion(_linuxSystemReader.GetOsInfo()).ShouldBe("25.04");
         }
     }
 
     public class GetCpuUsageMethod : LinuxSystemReaderTests
     {
         [Test]
-        public void Throws_On_Unexpected_Format()
+        public void Parses_Cpu_Usage()
         {
             _cliResults[LinuxSystemReader.CpuUsageCommand] = "%CPU(s):  4,5 us,  2,3 sy,  0,0 ni, 93,21 id,  0,0 wa,  0,0 hi,  0,0 si,  0,0 st";
-            _linuxSystemParser.GetCpuUsage().ShouldBe(6.79f, 0.01f);
+            _linuxSystemReader.GetCpuUsage().ShouldBe(6.79f, 0.01f);
         }
     }
     
     public class GetMemoryInfonMethod : LinuxSystemReaderTests
     {
         [Test]
-        public void Parses_Proc_MemInfo()
+        public void Parses_Free_And_Total_Memory()
         {
             _cliResults[LinuxSystemReader.MemoryInfoCommand] = @"
                 MemTotal:        9633420 kB
@@ -80,7 +80,7 @@ public class LinuxSystemReaderTests
                 Inactive:        5674856 kB
                 ";
 
-            var info = _linuxSystemParser.GetMemoryInfo();
+            var info = _linuxSystemReader.GetMemoryInfo();
 
             info.FreeMemory.ShouldBe(1281268L * 1024L);
             info.TotalMemory.ShouldBe(9633420L * 1024L);
