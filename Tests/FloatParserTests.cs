@@ -1,4 +1,3 @@
-using NUnit.Framework;
 using Shouldly;
 using TinySystemInfo;
 
@@ -23,5 +22,17 @@ public class FloatParserTests
         {
             FloatParser.Parse(value).ShouldBe(expected);
         }
-    }
+
+		[TestCase("This is 0.95% true", 0.95f)]
+		public void Parses_Within_Strings(string value, float expected)
+		{
+			FloatParser.Parse(value).ShouldBe(expected);
+		}
+
+		[TestCase("This is 0.95% or 0.98% true", 0.95f)]
+		public void Uses_First_Float_In_Strings(string value, float expected)
+		{
+			FloatParser.Parse(value).ShouldBe(expected);
+		}
+	}
 }
