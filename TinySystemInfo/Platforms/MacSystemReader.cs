@@ -27,7 +27,7 @@ public class MacSystemReader : ISystemReader
         return new SystemInfo(
             HostName: Environment.MachineName,
             OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
-            OSName: "macOS",
+            OSName: GetOsName(),
             OSVersion: GetOsVersion(),
             CpuUsagePercent: cpuUsage,
             CpuCount: Environment.ProcessorCount,
