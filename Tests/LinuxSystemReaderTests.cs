@@ -63,7 +63,7 @@ public class LinuxSystemReaderTests
             _linuxSystemReader.GetCpuUsage().ShouldBe(6.79f, 0.01f);
         }
     }
-    
+
     public class GetMemoryInfonMethod : LinuxSystemReaderTests
     {
         [Test]
@@ -82,8 +82,32 @@ public class LinuxSystemReaderTests
 
             var info = _linuxSystemReader.GetMemoryInfo();
 
-            info.FreeMemory.ShouldBe(1281268L * 1024L);
-            info.TotalMemory.ShouldBe(9633420L * 1024L);
+            info.FreeBytes.ShouldBe(1281268L * 1024L);
+            info.TotalBytes.ShouldBe(9633420L * 1024L);
+        }
+    }
+    
+    public class GetVolumesMethod : LinuxSystemReaderTests
+    {
+        [Test]
+        public void Parses_Volumes()
+        {
+            // Filesystem     1K-blocks       Used Available iused  Mounted on
+            _cliResults[LinuxSystemReader.VolumesCommand] = @"
+                /dev/vda2       23509104 13606096   8683476   62% /
+                /dev/vda1        1098632     6516   1092116    1% /boot/efi";
+
+            var info = _linuxSystemReader.GetVolumes().ToArray();
+
+            info.Length.ShouldBe(2);
+
+            info[0].Mount.ShouldBe("/");
+            info[0].TotalBytes.ShouldBe(23509104L * 1024);
+            info[0].UsedBytes.ShouldBe(13606096L * 1024);
+            
+            info[1].Mount.ShouldBe("/boot/efi");
+            info[1].TotalBytes.ShouldBe(1098632L * 1024);
+            info[1].UsedBytes.ShouldBe(6516L * 1024);
         }
     }
 }

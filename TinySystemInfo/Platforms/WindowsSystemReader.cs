@@ -53,8 +53,8 @@ public class WindowsSystemReader : ISystemReader
 			OSVersion: Environment.OSVersion.Version.ToString(),
 			CpuUsagePercent: cpuUsage,
 			CpuCount: Environment.ProcessorCount,
-			RamTotalBytes: (long)memStatus.ullTotalPhys,
-			RamAvailableBytes: (long)memStatus.ullAvailPhys
+			Memory: new Memory(TotalBytes: (long)memStatus.ullTotalPhys, UsedBytes: (long)memStatus.ullTotalPhys - (long)memStatus.ullAvailPhys),
+			Volumes: []
 		);
 	}
 

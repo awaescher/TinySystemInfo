@@ -60,8 +60,32 @@ public class MacSystemReaderTests
 
             var info = _macSystemReader.GetMemoryInfo();
 
-            info.FreeMemory.ShouldBe(137438953472L / 100 * 96);
-            info.TotalMemory.ShouldBe(137438953472L);
+            info.FreeBytes.ShouldBe(137438953472L / 100 * 96);
+            info.TotalBytes.ShouldBe(137438953472L);
+        }
+    }
+
+    public class GetVolumesMethod : MacSystemReaderTests
+    {
+        [Test]
+        public void Parses_Volumes()
+        {
+            // Filesystem     1024-blocks       Used Available Capacity iused      ifree %iused  Mounted on
+            _cliResults[MacSystemReader.VolumesCommand] = @"
+                /dev/disk3s1s1   971350180   10988752 748049596     2%  425798 4294134754    0%   /
+                /dev/disk7s1    1953309744 1135425672 817591264    59%  344104 8175912640    0%   /Volumes/MyExternalDrive";
+
+            var info = _macSystemReader.GetVolumes().ToArray();
+
+            info.Length.ShouldBe(2);
+
+            info[0].Mount.ShouldBe("/");
+            info[0].TotalBytes.ShouldBe(971350180L * 1024);
+            info[0].UsedBytes.ShouldBe(10988752L * 1024);
+            
+            info[1].Mount.ShouldBe("/Volumes/MyExternalDrive");
+            info[1].TotalBytes.ShouldBe(1953309744L * 1024);
+            info[1].UsedBytes.ShouldBe(1135425672L * 1024);
         }
     }
 }

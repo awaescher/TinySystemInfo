@@ -9,10 +9,11 @@ namespace TinySystemInfo.Platforms;
 public class MacSystemReader : ISystemReader
 {
     public static string CpuUsageCommand { get; } = "top -l 1 -s 0 -n 0 | grep -i CPU";
-	public static string OsNameCommand { get; } = "sw_vers -productName";
-	public static string OsVersionCommand { get; } = "sw_vers -productVersion";
-	public static string FreeMemoryCommand { get; } = "sysctl -n kern.memorystatus_level";
-	public static string TotalMemoryCommand { get; } = "sysctl -n hw.memsize";
+    public static string OsNameCommand { get; } = "sw_vers -productName";
+    public static string OsVersionCommand { get; } = "sw_vers -productVersion";
+    public static string FreeMemoryCommand { get; } = "sysctl -n kern.memorystatus_level";
+    public static string TotalMemoryCommand { get; } = "sysctl -n hw.memsize";
+    public static string VolumesCommand { get; } = "df -k /Volumes/* | grep /dev/disk";
 
     public ICli Cli { get; set; } = new BashCli();
 
@@ -31,8 +32,8 @@ public class MacSystemReader : ISystemReader
             OSVersion: GetOsVersion(),
             CpuUsagePercent: cpuUsage,
             CpuCount: Environment.ProcessorCount,
-            RamTotalBytes: memoryInfo.TotalMemory,
-            RamAvailableBytes: memoryInfo.FreeMemory
+			Memory: new Memory(TotalBytes: memoryInfo.TotalBytes, UsedBytes: memoryInfo.TotalBytes - memoryInfo.FreeBytes),
+            Volumes: GetVolumes().Select(v => new Volume(Mount: v.Mount, TotalBytes: v.TotalBytes, UsedBytes: v.UsedBytes))
         );
     }
 
@@ -53,10 +54,29 @@ public class MacSystemReader : ISystemReader
     {
         var memoryPressureFree = long.Parse(Cli.Run(FreeMemoryCommand));
         long totalMemory = long.Parse(Cli.Run(TotalMemoryCommand));
+        return new MemoryInfo(TotalBytes: totalMemory, FreeBytes: totalMemory / 100 * memoryPressureFree);
+    }
 
-        var freeMemory = totalMemory / 100 * memoryPressureFree;
+    public IEnumerable<VolumeInfo> GetVolumes()
+    {
+        var output = Cli.Run(VolumesCommand);
 
-        return new MemoryInfo(TotalMemory: totalMemory, FreeMemory: (long)freeMemory);
+        // output looks like this (without header row)
+        // Filesystem     1024-blocks       Used Available Capacity iused      ifree %iused  Mounted on
+        // /dev/disk3s1s1   971350180   10988752 748049596     2%  425798 4294134754    0%   /
+        // /dev/disk7s1    1953309744 1135425672 817591264    59%  344104 8175912640    0%   /Volumes/MyExternalDrive
+
+        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 3)
+            {
+                yield return new VolumeInfo(
+                    Mount: parts.Last(),
+                    TotalBytes: long.Parse(parts[1]) * 1024,
+                    UsedBytes: long.Parse(parts[2]) * 1024);
+            }
+        }
     }
 
     public string GetOsName() => Cli.Run(OsNameCommand);
@@ -65,5 +85,7 @@ public class MacSystemReader : ISystemReader
 
     public record CpuInfo(long IdleTime, long TotalTime);
 
-    public record MemoryInfo(long TotalMemory, long FreeMemory);
+    public record MemoryInfo(long TotalBytes, long FreeBytes);
+
+    public record VolumeInfo(string Mount, long TotalBytes, long UsedBytes);
 }
