@@ -46,6 +46,11 @@ public class WindowsSystemReader : ISystemReader
 		var memStatus = new MEMORYSTATUSEX();
 		GlobalMemoryStatusEx(memStatus);
 
+		var drives = DriveInfo.GetDrives()
+			.Where(d => d.DriveType == DriveType.Fixed && d.IsReady)
+			.Select(d => new Volume(Mount: d.Name, TotalBytes: d.TotalSize, UsedBytes: d.TotalSize - d.AvailableFreeSpace))
+			.ToArray();
+
 		return new SystemInfo(
 			HostName: Environment.MachineName,
 			OSArchitecture: RuntimeInformation.OSArchitecture.ToString(),
@@ -54,7 +59,7 @@ public class WindowsSystemReader : ISystemReader
 			CpuUsagePercent: cpuUsage,
 			CpuCount: Environment.ProcessorCount,
 			Memory: new Memory(TotalBytes: (long)memStatus.ullTotalPhys, UsedBytes: (long)memStatus.ullTotalPhys - (long)memStatus.ullAvailPhys),
-			Volumes: []
+			Volumes: drives
 		);
 	}
 
