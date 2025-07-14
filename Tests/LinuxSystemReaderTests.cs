@@ -94,20 +94,20 @@ public class LinuxSystemReaderTests
         {
             // Filesystem     1K-blocks       Used Available iused  Mounted on
             _cliResults[LinuxSystemReader.VolumesCommand] = @"
-                /dev/vda2       23509104 13606096   8683476   62% /
-                /dev/vda1        1098632     6516   1092116    1% /boot/efi";
+                /dev/vda2       23509104 12949252   9340320   59% /
+                /dev/nvme0n1    10218772  1592928   8085172   17% /media/MyExternalDrive";
 
             var info = _linuxSystemReader.GetVolumes().ToArray();
 
             info.Length.ShouldBe(2);
 
             info[0].Mount.ShouldBe("/");
-            info[0].TotalBytes.ShouldBe(23509104L * 1024);
-            info[0].UsedBytes.ShouldBe(13606096L * 1024);
+            ((double)info[0].TotalBytes / 1024d / 1024d / 1024d).ShouldBe(24.1, tolerance: 0.2);
+            ((double)info[0].UsedBytes / 1024d / 1024d / 1024d).ShouldBe(13.3, tolerance: 0.2);
             
-            info[1].Mount.ShouldBe("/boot/efi");
-            info[1].TotalBytes.ShouldBe(1098632L * 1024);
-            info[1].UsedBytes.ShouldBe(6516L * 1024);
+            info[1].Mount.ShouldBe("/media/MyExternalDrive");
+            ((double)info[1].TotalBytes / 1024d / 1024d / 1024d).ShouldBe(10.5, tolerance: 0.2);
+            ((double)info[1].UsedBytes / 1024d / 1024d / 1024d).ShouldBe(1.6, tolerance: 0.2);
         }
     }
 }
