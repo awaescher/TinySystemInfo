@@ -1,6 +1,4 @@
-﻿using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 
@@ -33,7 +31,7 @@ public class MacSystemReader : ISystemReader
             CpuUsagePercent: cpuUsage,
             CpuCount: Environment.ProcessorCount,
 			Memory: new Memory(TotalBytes: memoryInfo.TotalBytes, UsedBytes: memoryInfo.TotalBytes - memoryInfo.FreeBytes),
-            Volumes: GetVolumes().Select(v => new Volume(Mount: v.Mount, TotalBytes: v.TotalBytes, UsedBytes: v.UsedBytes))
+            Volumes: GetVolumes().Select(v => new Volume(Mount: v.Mount, TotalBytes: v.TotalBytes, UsedBytes: v.TotalBytes - v.FreeBytes))
         );
     }
 
@@ -59,6 +57,10 @@ public class MacSystemReader : ISystemReader
 
     public IEnumerable<VolumeInfo> GetVolumes()
     {
+        // Conversion factor from binary gigabyte scaling (e.g. 2^30) to decimal gigabyte scaling (10^9)
+        // This is used to normalize the '1024-blocks' output which uses 2^30 blocks to a decimal GB scale.
+        const double BIN_TO_DEC_GIGA_SCALE = 1.073741824d;
+
         var output = Cli.Run(VolumesCommand);
 
         // output looks like this (without header row)
@@ -66,15 +68,15 @@ public class MacSystemReader : ISystemReader
         // /dev/disk3s1s1   971350180   10988752 748049596     2%  425798 4294134754    0%   /
         // /dev/disk7s1    1953309744 1135425672 817591264    59%  344104 8175912640    0%   /Volumes/MyExternalDrive
 
-        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var line in output.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
         {
-            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length > 3)
+            var parts = line.Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 4)
             {
                 yield return new VolumeInfo(
                     Mount: parts.Last(),
-                    TotalBytes: long.Parse(parts[1]) * 1024,
-                    UsedBytes: long.Parse(parts[2]) * 1024);
+                    TotalBytes: (long)(double.Parse(parts[1]) * BIN_TO_DEC_GIGA_SCALE) * 1024L,
+                    FreeBytes: (long)(double.Parse(parts[3]) * BIN_TO_DEC_GIGA_SCALE) * 1024L); // APFS will show invalid values for used bytes here, so use the free/available bytes
             }
         }
     }
@@ -87,5 +89,5 @@ public class MacSystemReader : ISystemReader
 
     public record MemoryInfo(long TotalBytes, long FreeBytes);
 
-    public record VolumeInfo(string Mount, long TotalBytes, long UsedBytes);
+    public record VolumeInfo(string Mount, long TotalBytes, long FreeBytes);
 }
