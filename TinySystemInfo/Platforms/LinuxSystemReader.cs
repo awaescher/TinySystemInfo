@@ -83,6 +83,10 @@ public class LinuxSystemReader : ISystemReader
 
 	public IEnumerable<VolumeInfo> GetVolumes()
 	{
+		// Conversion factor from binary gigabyte scaling (e.g. 2^30) to decimal gigabyte scaling (10^9)
+		// This is used to normalize the '1024-blocks' output which uses 2^30 blocks to a decimal GB scale.
+		const double BIN_TO_DEC_GIGA_SCALE = 1.073741824d;
+
 		var output = Cli.Run(VolumesCommand);
 
 		// output looks like this (without header row)
@@ -97,8 +101,8 @@ public class LinuxSystemReader : ISystemReader
 			{
 				yield return new VolumeInfo(
 					Mount: parts.Last(),
-					TotalBytes: long.Parse(parts[1]) * 1024,
-					UsedBytes: long.Parse(parts[2]) * 1024);
+					TotalBytes: (long)(double.Parse(parts[1]) * BIN_TO_DEC_GIGA_SCALE) * 1024L,
+					UsedBytes: (long)(double.Parse(parts[2]) * BIN_TO_DEC_GIGA_SCALE) * 1024L);
 			}
 		}
 	}
