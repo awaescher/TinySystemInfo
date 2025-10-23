@@ -31,14 +31,15 @@ public class WindowsSystemReader : ISystemReader
 	[SupportedOSPlatform("windows")]
     public async Task<SystemInfo> Read(TimeSpan delay)
     {
-        await Task.Delay(delay);
-
 		float cpuUsage = 0;
 
 		using (var cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total"))
 		{
-			_ = cpuCounter.NextValue(); // dicard first measure
-			await Task.Delay(1000); // wait to get a reliable value
+			_ = cpuCounter.NextValue(); // discard first measure
+			
+			// Use the provided delay or at least 500ms for accurate CPU measurement
+			var measurementDelay = delay.TotalMilliseconds < 500 ? TimeSpan.FromMilliseconds(500) : delay;
+			await Task.Delay(measurementDelay);
 
 			cpuUsage = cpuCounter.NextValue();
 		}

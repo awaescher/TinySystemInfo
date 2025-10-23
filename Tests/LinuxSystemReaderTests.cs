@@ -59,7 +59,21 @@ public class LinuxSystemReaderTests
         [Test]
         public void Parses_Cpu_Usage()
         {
-            _cliResults[LinuxSystemReader.CpuUsageCommand] = "%CPU(s):  4,5 us,  2,3 sy,  0,0 ni, 93,21 id,  0,0 wa,  0,0 hi,  0,0 si,  0,0 st";
+            _cliResults[LinuxSystemReader.CpuStatCommand] = "cpu  100 0 50 850 0 0 0 0 0 0";
+            var cpuInfo1 = _linuxSystemReader.GetCpuInfo();
+            
+            _cliResults[LinuxSystemReader.CpuStatCommand] = "cpu  200 0 100 1700 0 0 0 0 0 0";
+            var cpuInfo2 = _linuxSystemReader.GetCpuInfo();
+            
+            // Delta: user=100, system=50, idle=850 -> total=1000, active=150 -> 15% usage
+            _linuxSystemReader.CalculateCpuUsage(cpuInfo1, cpuInfo2).ShouldBe(15.0f, 0.01f);
+        }
+        
+        [Test]
+        public void Legacy_Method_Parses_Cpu_Usage()
+        {
+            // Keep the old test for backward compatibility
+            _cliResults["top -b -n 1 | grep -i %CPU"] = "%CPU(s):  4,5 us,  2,3 sy,  0,0 ni, 93,21 id,  0,0 wa,  0,0 hi,  0,0 si,  0,0 st";
             _linuxSystemReader.GetCpuUsage().ShouldBe(6.79f, 0.01f);
         }
     }

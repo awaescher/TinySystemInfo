@@ -48,6 +48,42 @@ public class MacSystemReaderTests
             _cliResults[MacSystemReader.CpuUsageCommand] = "CPU usage: 1.73% user, 6.56% sys, 91.69% idle ";
             _macSystemReader.GetCpuUsage().ShouldBe(8.31f, 0.01f);
         }
+        
+        [Test]
+        public void Parses_Cpu_Usage_From_Top_Sampled()
+        {
+            // top -l 2 output with 2 samples
+            _cliResults[MacSystemReader.CpuUsageSampledCommand] = @"CPU usage: 5.80% user, 7.15% sys, 87.4% idle 
+CPU usage: 4.28% user, 2.48% sys, 93.22% idle";
+            
+            // The last line shows: 93.22% idle -> CPU usage = 100 - 93.22 = 6.78%
+            _macSystemReader.GetCpuUsageFromTopSampled().ShouldBe(6.78f, 0.01f);
+        }
+        
+        [Test]
+        public void Falls_Back_To_Single_Sample_When_Dual_Sample_Fails()
+        {
+            // Set up dual sample to return invalid data
+            _cliResults[MacSystemReader.CpuUsageSampledCommand] = "invalid output";
+            _cliResults[MacSystemReader.CpuUsageCommand] = "CPU usage: 1.73% user, 6.56% sys, 91.69% idle ";
+            
+            // Should fallback to single sample method
+            _macSystemReader.GetCpuUsageFromTopSampled().ShouldBe(8.31f, 0.01f);
+        }
+        
+        [Test]
+        public void Parses_Cpu_Usage_From_IoStat()
+        {
+            // iostat output with 2 samples (legacy test)
+            _cliResults["iostat -c 2 -w 1"] = @"
+              disk0               disk6       cpu    load average
+    KB/t  tps  MB/s     KB/t  tps  MB/s  us sy id   1m   5m   15m
+   19.97   73  1.43   327.64    3  1.06   3  1 96  2.38 2.38 2.61
+    4.34   94  0.40     0.00    0  0.00   5  3 92  2.38 2.38 2.61";
+            
+            // The last line shows: us=5, sy=3, id=92 -> CPU usage = 100 - 92 = 8%
+            _macSystemReader.GetCpuUsageFromIoStat().ShouldBe(8.0f, 0.01f);
+        }
     }
 
     public class GetMemoryInfonMethod : MacSystemReaderTests
@@ -55,12 +91,20 @@ public class MacSystemReaderTests
         [Test]
         public void Parses_Free_And_Total_Memory()
         {
-            _cliResults[MacSystemReader.FreeMemoryCommand] = "96";
             _cliResults[MacSystemReader.TotalMemoryCommand] = "137438953472";
+            _cliResults[MacSystemReader.PageSizeCommand] = "16384";
+            _cliResults[MacSystemReader.VmStatCommand] = @"
+Pages free:                               1000000.
+Pages active:                             2000000.
+Pages inactive:                           1500000.
+Pages speculative:                        500000.
+Pages wired down:                         3000000.
+Pages occupied by compressor:             500000.";
 
             var info = _macSystemReader.GetMemoryInfo();
 
-            info.FreeBytes.ShouldBe(137438953472L / 100 * 96);
+            // Free = (free + inactive + speculative) * pageSize = (1000000 + 1500000 + 500000) * 16384 = 49152000000
+            info.FreeBytes.ShouldBe(49152000000L);
             info.TotalBytes.ShouldBe(137438953472L);
         }
     }
