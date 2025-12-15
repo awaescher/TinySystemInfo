@@ -4,22 +4,62 @@ using System.Text.RegularExpressions;
 
 namespace TinySystemInfo.Platforms;
 
+/// <summary>
+/// Provides system information reading capabilities for macOS operating systems.
+/// </summary>
 public class MacSystemReader : ISystemReader
 {
+    /// <summary>
+    /// Gets the command used to read CPU usage from a single top sample.
+    /// </summary>
     public static string CpuUsageCommand { get; } = "top -l 1 -s 0 -n 0 | grep -i CPU";
+    
+    /// <summary>
+    /// Gets the command used to read CPU usage from two top samples for more accurate measurements.
+    /// </summary>
     public static string CpuUsageSampledCommand { get; } = "top -l 2 -s 1 -n 0 | grep -i 'CPU usage'";
+    
+    /// <summary>
+    /// Gets the command used to read the OS name.
+    /// </summary>
     public static string OsNameCommand { get; } = "sw_vers -productName";
+    
+    /// <summary>
+    /// Gets the command used to read the OS version.
+    /// </summary>
     public static string OsVersionCommand { get; } = "sw_vers -productVersion";
+    
+    /// <summary>
+    /// Gets the command used to read virtual memory statistics.
+    /// </summary>
     public static string VmStatCommand { get; } = "vm_stat";
+    
+    /// <summary>
+    /// Gets the command used to read the total physical memory size.
+    /// </summary>
     public static string TotalMemoryCommand { get; } = "sysctl -n hw.memsize";
+    
+    /// <summary>
+    /// Gets the command used to read the system page size.
+    /// </summary>
     public static string PageSizeCommand { get; } = "pagesize";
+    
+    /// <summary>
+    /// Gets the command used to list mounted volumes.
+    /// </summary>
     public static string VolumesCommand { get; } = "df -k /Volumes/* | grep /dev/disk";
 
+    /// <summary>
+    /// Gets or sets the command-line interface used to execute shell commands.
+    /// </summary>
     public ICli Cli { get; set; } = new BashCli();
 
+    /// <inheritdoc />
     [SupportedOSPlatform("osx")]
-    public async Task<SystemInfo> Read(TimeSpan delay)
+    public async Task<SystemInfo> ReadAsync(SystemReaderOptions? options = default)
     {
+		options ??= new SystemReaderOptions();
+
         // For macOS, we use top with 2 samples to get accurate CPU measurements
         float cpuUsage = GetCpuUsageFromTopSampled();
         var memoryInfo = GetMemoryInfo();
@@ -36,6 +76,10 @@ public class MacSystemReader : ISystemReader
         );
     }
 
+    /// <summary>
+    /// Gets the current CPU usage from a single top sample.
+    /// </summary>
+    /// <returns>The CPU usage as a percentage (0-100).</returns>
     public float GetCpuUsage()
     {
         var output = Cli.Run(CpuUsageCommand);
@@ -49,6 +93,14 @@ public class MacSystemReader : ISystemReader
         return 0;
     }
 
+    /// <summary>
+    /// Gets the CPU usage from two top samples for more accurate measurements.
+    /// </summary>
+    /// <returns>The CPU usage as a percentage (0-100).</returns>
+    /// <remarks>
+    /// This method takes two CPU samples with a 1-second interval between them,
+    /// providing a more accurate average CPU usage measurement than a single sample.
+    /// </remarks>
     public float GetCpuUsageFromTopSampled()
     {
         try
@@ -88,6 +140,14 @@ public class MacSystemReader : ISystemReader
         }
     }
 
+    /// <summary>
+    /// Gets the CPU usage using iostat command (legacy method).
+    /// </summary>
+    /// <returns>The CPU usage as a percentage (0-100).</returns>
+    /// <remarks>
+    /// This is a legacy method maintained for backward compatibility with tests.
+    /// It uses iostat with 2 samples and 1-second interval for CPU measurements.
+    /// </remarks>
     public float GetCpuUsageFromIoStat()
     {
         try
@@ -129,6 +189,13 @@ public class MacSystemReader : ISystemReader
         }
     }
 
+    /// <summary>
+    /// Retrieves CPU timing information from top output.
+    /// </summary>
+    /// <returns>CPU information including idle time and total time in arbitrary ticks.</returns>
+    /// <remarks>
+    /// This is a fallback method that converts CPU percentages from top into timing information.
+    /// </remarks>
     public CpuInfo GetCpuInfo()
     {
         try
@@ -157,6 +224,12 @@ public class MacSystemReader : ISystemReader
         }
     }
 
+    /// <summary>
+    /// Calculates CPU usage percentage from two CPU measurements taken at different times.
+    /// </summary>
+    /// <param name="before">The CPU information from the first measurement.</param>
+    /// <param name="after">The CPU information from the second measurement.</param>
+    /// <returns>The CPU usage as a percentage (0-100).</returns>
     public float CalculateCpuUsage(CpuInfo before, CpuInfo after)
     {
         long totalDelta = after.TotalTime - before.TotalTime;
@@ -168,6 +241,14 @@ public class MacSystemReader : ISystemReader
         return 100.0f * (1.0f - (float)idleDelta / totalDelta);
     }
 
+    /// <summary>
+    /// Retrieves memory usage information from vm_stat and sysctl.
+    /// </summary>
+    /// <returns>Memory information including total and free bytes.</returns>
+    /// <remarks>
+    /// Free memory is calculated as the sum of free, inactive, and speculative pages.
+    /// Used memory includes active, wired, and compressed pages.
+    /// </remarks>
     public MemoryInfo GetMemoryInfo()
     {
         try
@@ -240,6 +321,14 @@ public class MacSystemReader : ISystemReader
         return 0;
     }
 
+    /// <summary>
+    /// Retrieves information about all mounted volumes.
+    /// </summary>
+    /// <returns>An enumerable collection of volume information for all mounted disks.</returns>
+    /// <remarks>
+    /// This method uses the df command to enumerate volumes and parses APFS and other filesystem types.
+    /// For APFS volumes, free bytes are used instead of calculating from used bytes due to APFS's dynamic allocation.
+    /// </remarks>
     public IEnumerable<VolumeInfo> GetVolumes()
     {
         // Conversion factor from binary gigabyte scaling (e.g. 2^30) to decimal gigabyte scaling (10^9)
@@ -287,13 +376,37 @@ public class MacSystemReader : ISystemReader
         }
     }
 
+    /// <summary>
+    /// Gets the macOS operating system name.
+    /// </summary>
+    /// <returns>The OS name (e.g., "macOS").</returns>
     public string GetOsName() => Cli.Run(OsNameCommand);
 
+    /// <summary>
+    /// Gets the macOS operating system version.
+    /// </summary>
+    /// <returns>The OS version string (e.g., "14.2.1").</returns>
     public string GetOsVersion() => Cli.Run(OsVersionCommand);
 
+    /// <summary>
+    /// Represents CPU timing information.
+    /// </summary>
+    /// <param name="IdleTime">The cumulative idle time in arbitrary ticks.</param>
+    /// <param name="TotalTime">The cumulative total time (all CPU states) in arbitrary ticks.</param>
     public record CpuInfo(long IdleTime, long TotalTime);
 
+    /// <summary>
+    /// Represents memory usage information.
+    /// </summary>
+    /// <param name="TotalBytes">The total physical memory in bytes.</param>
+    /// <param name="FreeBytes">The available free memory in bytes.</param>
     public record MemoryInfo(long TotalBytes, long FreeBytes);
 
+    /// <summary>
+    /// Represents storage volume information.
+    /// </summary>
+    /// <param name="Mount">The mount point path of the volume.</param>
+    /// <param name="TotalBytes">The total capacity of the volume in bytes.</param>
+    /// <param name="FreeBytes">The available free space on the volume in bytes.</param>
     public record VolumeInfo(string Mount, long TotalBytes, long FreeBytes);
 }
