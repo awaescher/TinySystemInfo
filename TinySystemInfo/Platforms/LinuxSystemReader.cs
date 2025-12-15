@@ -5,20 +5,44 @@ using System.Text.RegularExpressions;
 
 namespace TinySystemInfo.Platforms;
 
+/// <summary>
+/// Provides system information reading capabilities for Linux operating systems.
+/// </summary>
 public class LinuxSystemReader : ISystemReader
 {
+	/// <summary>
+	/// Gets the command used to read CPU statistics from /proc/stat.
+	/// </summary>
 	public static string CpuStatCommand { get; } = "cat /proc/stat";
+	
+	/// <summary>
+	/// Gets the command used to read OS information from /etc/os-release.
+	/// </summary>
 	public static string OsInfoCommand { get; } = "cat /etc/os-release";
+	
+	/// <summary>
+	/// Gets the command used to read memory information from /proc/meminfo.
+	/// </summary>
 	public static string MemoryInfoCommand { get; } = "cat /proc/meminfo";
+	
+	/// <summary>
+	/// Gets the command used to list mounted disk volumes.
+	/// </summary>
 	public static string VolumesCommand { get; } = "df | grep -E '^/dev/(sd|vd|nvme|hd)'";
 
+	/// <summary>
+	/// Gets or sets the command-line interface used to execute shell commands.
+	/// </summary>
 	public ICli Cli { get; set; } = new BashCli();
 
+	/// <inheritdoc />
 	[SupportedOSPlatform("linux")]
-	public async Task<SystemInfo> Read(TimeSpan delay)
+	public async Task<SystemInfo> ReadAsync(SystemReaderOptions? options = default)
 	{
+		options ??= new SystemReaderOptions();
+
 		var cpuInfo1 = GetCpuInfo();
-		await Task.Delay(delay);
+		await Task.Delay(options.DelayBetweenCpuMeasurements);
 		var cpuInfo2 = GetCpuInfo();
 		
 		var cpuUsage = CalculateCpuUsage(cpuInfo1, cpuInfo2);
@@ -37,10 +61,24 @@ public class LinuxSystemReader : ISystemReader
 		);
 	}
 
+	/// <summary>
+	/// Retrieves the raw OS information from /etc/os-release.
+	/// </summary>
+	/// <returns>The contents of the /etc/os-release file.</returns>
 	public string GetOsInfo() => Cli.Run(OsInfoCommand);
 
+	/// <summary>
+	/// Extracts the OS name from the OS information.
+	/// </summary>
+	/// <param name="osInfo">The raw OS information string from /etc/os-release.</param>
+	/// <returns>The operating system name (e.g., "Ubuntu 22.04 LTS").</returns>
 	public string GetOsName(string osInfo) => ParseOsInfo(osInfo, "PRETTY_NAME");
 
+	/// <summary>
+	/// Extracts the OS version from the OS information.
+	/// </summary>
+	/// <param name="osInfo">The raw OS information string from /etc/os-release.</param>
+	/// <returns>The operating system version (e.g., "22.04").</returns>
 	public string GetOsVersion(string osInfo) => ParseOsInfo(osInfo, "VERSION_ID");
 
 	private string ParseOsInfo(string osInfo, string key)
@@ -49,6 +87,10 @@ public class LinuxSystemReader : ISystemReader
 		return match.Groups[1].Value.Trim().TrimStart('\"').TrimEnd('\"');
 	}
 
+	/// <summary>
+	/// Retrieves CPU timing information from /proc/stat.
+	/// </summary>
+	/// <returns>CPU information including idle time and total time in system ticks.</returns>
 	public CpuInfo GetCpuInfo()
 	{
 		try
@@ -88,6 +130,12 @@ public class LinuxSystemReader : ISystemReader
 		}
 	}
 
+	/// <summary>
+	/// Calculates CPU usage percentage from two CPU measurements taken at different times.
+	/// </summary>
+	/// <param name="before">The CPU information from the first measurement.</param>
+	/// <param name="after">The CPU information from the second measurement.</param>
+	/// <returns>The CPU usage as a percentage (0-100).</returns>
 	public float CalculateCpuUsage(CpuInfo before, CpuInfo after)
 	{
 		long totalDelta = after.TotalTime - before.TotalTime;
@@ -99,6 +147,14 @@ public class LinuxSystemReader : ISystemReader
 		return 100.0f * (1.0f - (float)idleDelta / totalDelta);
 	}
 
+	/// <summary>
+	/// Gets the current CPU usage using the top command (legacy method).
+	/// </summary>
+	/// <returns>The CPU usage as a percentage (0-100).</returns>
+	/// <remarks>
+	/// This is a legacy method maintained for backward compatibility with tests.
+	/// It uses a simple top-based approach which is less accurate than the /proc/stat method.
+	/// </remarks>
 	public float GetCpuUsage()
 	{
 		// Legacy method for backward compatibility with tests
@@ -114,6 +170,10 @@ public class LinuxSystemReader : ISystemReader
 		return 0;
 	}
 
+	/// <summary>
+	/// Retrieves memory usage information from /proc/meminfo.
+	/// </summary>
+	/// <returns>Memory information including total and free bytes.</returns>
 	public MemoryInfo GetMemoryInfo()
 	{
 		try
@@ -142,6 +202,10 @@ public class LinuxSystemReader : ISystemReader
 		return 0;
 	}
 
+	/// <summary>
+	/// Retrieves information about all mounted disk volumes.
+	/// </summary>
+	/// <returns>An enumerable collection of volume information for all mounted disks.</returns>
 	public IEnumerable<VolumeInfo> GetVolumes()
 	{
 		// Conversion factor from binary gigabyte scaling (e.g. 2^30) to decimal gigabyte scaling (10^9)
@@ -189,10 +253,26 @@ public class LinuxSystemReader : ISystemReader
 		}
 	}
 
+	/// <summary>
+	/// Represents CPU timing information from /proc/stat.
+	/// </summary>
+	/// <param name="IdleTime">The cumulative idle time in system ticks.</param>
+	/// <param name="TotalTime">The cumulative total time (all CPU states) in system ticks.</param>
 	public record CpuInfo(long IdleTime, long TotalTime);
 
+	/// <summary>
+	/// Represents memory usage information.
+	/// </summary>
+	/// <param name="TotalBytes">The total physical memory in bytes.</param>
+	/// <param name="FreeBytes">The available free memory in bytes.</param>
 	public record MemoryInfo(long TotalBytes, long FreeBytes);
 	
+	/// <summary>
+	/// Represents storage volume information.
+	/// </summary>
+	/// <param name="Mount">The mount point path of the volume.</param>
+	/// <param name="TotalBytes">The total capacity of the volume in bytes.</param>
+	/// <param name="UsedBytes">The number of bytes currently used on the volume.</param>
     public record VolumeInfo(string Mount, long TotalBytes, long UsedBytes);
 
 }

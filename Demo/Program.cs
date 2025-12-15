@@ -1,6 +1,6 @@
 ﻿using TinySystemInfo;
 
-var info = await TinySystemReader.Read(TimeSpan.FromSeconds(1));
+var info = await TinySystemReader.ReadAsync();
 
 Console.WriteLine(@$"
 Hostname:           {info.HostName}

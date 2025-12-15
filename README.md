@@ -24,7 +24,7 @@ A dependency free package that gathers just the absolute basic system metrics on
 
 ## Usage
 
-Install `TinySystemInfo` from NuGet and simply call `TinySystemReader.Read()`.
+Install `TinySystemInfo` from NuGet and simply call `await TinySystemReader.ReadAsync()`.
 
 ``` plaintext
 Hostname:           MacStudio
